@@ -961,7 +961,7 @@ function playWaterRipple(container, duration=1200, center){
   const oc=overlayCanvas(container); if(!oc) return Promise.resolve();
   const {ctx,w,h,dpr,cleanup}=oc;
   const cx=center?.x ?? (w/2), cy=center?.y ?? (h/2);
-  const sparkCols=[[255,212,77],[0,255,169]];
+  const sparkCols=[[181,111,28],[244,236,216]];
   const SPN=Math.floor(14*Math.min(1.5,(w*h)/60000));
   const sparks=[];
   for(let i=0;i<SPN;i++){
@@ -976,8 +976,8 @@ function playWaterRipple(container, duration=1200, center){
     g.addColorStop(0.0,'rgba(0,0,0,0)');
     g.addColorStop(0.18,rgba(0,0,0,0.22*a));
     g.addColorStop(0.45,rgba(255,255,255,0.50*a));
-    g.addColorStop(0.62,rgba(0,255,169,0.58*a));
-    g.addColorStop(0.84,rgba(61,183,255,0.30*a));
+    g.addColorStop(0.62,rgba(181,111,28,0.58*a));
+    g.addColorStop(0.84,rgba(244,236,216,0.30*a));
     g.addColorStop(1.0,'rgba(0,0,0,0)');
     ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
     ctx.save(); ctx.lineWidth=Math.max(0.8,2.5*dpr*(1-R/maxR)); ctx.strokeStyle=rgba(255,255,255,0.3*a);
@@ -1012,7 +1012,7 @@ async function drawTrailFromTileToBox(tile, box, ov, duration=480){
   const ex=(br.left+br.width/2)*dpr, ey=(br.top+br.height/2)*dpr;
   const ctrl={x:(sx+ex)/2, y:Math.min(sy,ey)-100*dpr};
   const sparks=[];
-  function addSpark(px,py){ sparks.push({x:px,y:py,vx:(Math.random()-0.5)*100*dpr,vy:(Math.random()-0.8)*140*dpr,life:0,max:0.22+Math.random()*0.18,r:(0.7+Math.random()*1.4)*dpr,col: (Math.random()<0.5 ? [255,212,77] : [0,255,169])}); }
+  function addSpark(px,py){ sparks.push({x:px,y:py,vx:(Math.random()-0.5)*100*dpr,vy:(Math.random()-0.8)*140*dpr,life:0,max:0.22+Math.random()*0.18,r:(0.7+Math.random()*1.4)*dpr,col: (Math.random()<0.5 ? [181,111,28] : [244,236,216])}); }
   await animateMs(duration,(p,dt)=>{
     const w=window.innerWidth*dpr, h=window.innerHeight*dpr;
     ctx.clearRect(0,0,w,h);
