@@ -39,6 +39,7 @@
   --shadow:rgba(0,0,0,.35);
 
   --header-h:90px; --vv-top:0px; --extra-top:0px;
+  --sat: env(safe-area-inset-top, 0px);
 }
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -48,18 +49,20 @@ body{
   color:var(--ink); background:var(--bg-grad);
   -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
   line-height:1.2;
-  padding-top:calc(var(--header-h) + var(--vv-top) + var(--extra-top));
+  padding-top:calc(var(--header-h) + var(--sat) + var(--vv-top) + var(--extra-top));
   overscroll-behavior-y:contain; touch-action:manipulation;
 }
 .top-veil{
   position:fixed; left:0; right:0; top:0; z-index:25; pointer-events:none;
-  height:calc(var(--vv-top) + var(--extra-top) + var(--header-h) + 16px);
+  height:calc(var(--header-h) + var(--sat) + var(--extra-top) + 16px);
+  transform:translateY(var(--vv-top));
   background:linear-gradient(180deg, rgba(18,10,42,.88) 0%, rgba(18,10,42,.72) 42%, rgba(18,10,42,.44) 72%, rgba(18,10,42,0) 100%);
-  -webkit-backdrop-filter:saturate(120%) blur(6px); backdrop-filter:saturate(120%) blur(6px);
+  -webkit-backdrop-filter:none; backdrop-filter:none;
   border-bottom:1px solid rgba(255,255,255,.12);
+  will-change:transform;
 }
 header{
-  position:fixed; left:0; right:0; z-index:30; top:0 !important;
+  position:fixed; left:0; right:0; z-index:30; top:calc(var(--sat) + var(--vv-top) + var(--extra-top)) !important;
   display:flex;align-items:center;gap:10px;flex-wrap:wrap;
   padding:10px 14px; min-height:90px;
   background:linear-gradient(0deg,rgba(255,255,255,.08),rgba(255,255,255,.06)), var(--bg-deep);
@@ -112,7 +115,7 @@ header{
 
 /* Result: cuando hay seleccionado/aleatorio, solo se muestra el elegido */
 .search-result{
-  position:fixed; top:calc(var(--vv-top) + var(--extra-top) + var(--header-h) + 12px);
+  position:fixed; top:calc(var(--sat) + var(--vv-top) + var(--extra-top) + var(--header-h) + 12px);
   left:50%; transform:translateX(-50%); z-index:55;
   display:none; width:min(92vw,720px);
   pointer-events:auto; display:flex;flex-wrap:wrap;justify-content:center;gap:12px
@@ -252,7 +255,7 @@ body.search-has-text #raffles{ display:none !important; } /* << solo mostrar sel
   padding:14px 16px;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.45);
   border-radius:14px;width:min(92vw,420px);text-align:center;
   font-size:clamp(16px,4.8vw,22px);font-weight:900;display:none;
-  position:fixed;top:calc(var(--vv-top) + var(--extra-top) + var(--header-h) + 10px);left:50%;transform:translateX(-50%);
+  position:fixed;top:calc(var(--sat) + var(--vv-top) + var(--extra-top) + var(--header-h) + 10px);left:50%;transform:translateX(-50%);
   z-index:60;box-shadow:0 12px 30px rgba(0,0,0,.35)
 }
 .message.error{background:#ff3b30;border-color:#ffd0d0;color:#fff}
@@ -1490,18 +1493,35 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   bootSet(10, 'Iniciando…', 'Verificando estado y preparando interfaz');
 
   function updateHeaderPadding(){ recalcHeaderHeightDynamic(); }
-  function applyViewportOffset(){ 
-    let top=0; 
-    if(window.visualViewport){ top=Math.max(0,Math.round(window.visualViewport.offsetTop||0)); } 
-    document.documentElement.style.setProperty('--vv-top', top + 'px'); 
-    updateHeaderPadding(); 
+  function applyViewportOffset(){
+    let top = 0;
+
+    if (window.visualViewport){
+      const vv = window.visualViewport;
+
+      // ✅ Solo aplicar offset cuando realmente parece teclado abierto.
+      // En iOS Safari, offsetTop cambia durante el scroll normal por la barra del navegador.
+      const keyboardLikely = (window.innerHeight - vv.height) > 120;
+
+      if (keyboardLikely){
+        top = Math.max(0, Math.round(vv.offsetTop || 0));
+        // ✅ Clamp defensivo para evitar valores locos que crean “velos” gigantes/parpadeos
+        top = Math.min(top, 180);
+      } else {
+        top = 0;
+      }
+    }
+
+    document.documentElement.style.setProperty('--vv-top', top + 'px');
+    updateHeaderPadding();
   }
   updateHeaderPadding(); applyViewportOffset();
-  if(window.visualViewport){
-    visualViewport.addEventListener('resize',()=>requestAnimationFrame(applyViewportOffset));
-    visualViewport.addEventListener('scroll',()=>requestAnimationFrame(applyViewportOffset));
+
+  if (window.visualViewport){
+    visualViewport.addEventListener('resize', ()=>requestAnimationFrame(applyViewportOffset));
+    // ❌ NO escuchar visualViewport.scroll (glitch iOS)
   }
-  window.addEventListener('resize',()=>requestAnimationFrame(applyViewportOffset),{passive:true});
+  window.addEventListener('resize', ()=>requestAnimationFrame(applyViewportOffset), { passive:true });
 
   // Carga base (config + logo) en paralelo para que boot se vea pro y rápido
   bootSet(18, 'Cargando configuración…', 'Aplicando nombre, teléfono, dirección y logo');
