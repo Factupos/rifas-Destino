@@ -1176,15 +1176,15 @@ function renderCart(){
   strip.className = 'cart-strip';
   panel.appendChild(strip);
 
-  CART_ITEMS.forEach(num=>{
-    const item = document.createElement('div');
-    item.className = 'cart-item';
-    item.dataset.num = num;
-    item.innerHTML =
-      `<span class="cart-item-num">${num}</span>`+
-      `<button type="button" class="cart-item-remove" aria-label="Quitar ${num}">&times;</button>`;
-    strip.appendChild(item);
-  });
+  CART_ITEMS.slice().reverse().forEach(num=>{
+  const item = document.createElement('div');
+  item.className = 'cart-item';
+  item.dataset.num = num;
+  item.innerHTML =
+    `<span class="cart-item-num">${num}</span>`+
+    `<button type="button" class="cart-item-remove" aria-label="Quitar ${num}">&times;</button>`;
+  strip.appendChild(item);
+   });
 
   strip.addEventListener('click', (ev)=>{
     const btn = ev.target.closest('.cart-item-remove');
