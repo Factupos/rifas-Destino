@@ -623,62 +623,131 @@ const BLOCK_CELL_RANGE = 'X2:X2';
 const LOGO_CELL_RANGE  = 'D2:D2';   // ← si tu logo está en otra fila, cambia aquí (ej: D3:D3)
 
 /* =========================
-   RENDIMIENTO: caché local
+   RENDIMIENTO: caché local (AISLADO por página/hoja)
    ========================= */
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 min
-const MAP_CACHE_KEY = 'raffle_map_v3';
-const CONF_CACHE_KEY = 'raffle_conf_v1';
-const LOGO_CACHE_KEY = 'raffle_logo_v1';
-const BLOCK_CACHE_KEY = 'raffle_block_v1';
+
+// Namespace único por página + spreadsheet + gids (evita mezclar caché entre páginas)
+const CACHE_NS = (() => {
+  const base = `${location.origin}${location.pathname}|${KEY}|${GID_RAFFLES}|${GID_CONFIG}|${GID_NOTIFICATIONS}`;
+  let h = 2166136261; // FNV-1a
+  for (let i = 0; i < base.length; i++) {
+    h ^= base.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return `raffle_${(h >>> 0).toString(16)}`;
+})();
+
+// Metadatos para validar que un caché corresponde a esta misma página/hoja
+const CACHE_META = Object.freeze({
+  KEY,
+  GID_RAFFLES,
+  GID_CONFIG,
+  GID_NOTIFICATIONS,
+  path: location.pathname
+});
+
+const MAP_CACHE_KEY   = `${CACHE_NS}_map_v3`;
+const CONF_CACHE_KEY  = `${CACHE_NS}_conf_v1`;
+const LOGO_CACHE_KEY  = `${CACHE_NS}_logo_v1`;
+const BLOCK_CACHE_KEY = `${CACHE_NS}_block_v1`;
+
+// Daily también debe ser por página (no solo por fecha)
+function dailyKey(){ return `${CACHE_NS}_daily_${todayKey()}`; }
+
+function cacheMetaOK(meta){
+  return !!meta && meta.KEY===KEY && meta.GID_RAFFLES===GID_RAFFLES && meta.GID_CONFIG===GID_CONFIG && meta.GID_NOTIFICATIONS===GID_NOTIFICATIONS && meta.path===location.pathname;
+}
+
 
 function saveMapCache(freeList){
-  try{ localStorage.setItem(MAP_CACHE_KEY, JSON.stringify({ts:Date.now(), freeList})) }catch(_){}
+  try{
+    localStorage.setItem(
+      MAP_CACHE_KEY,
+      JSON.stringify({ ts: Date.now(), meta: CACHE_META, freeList })
+    );
+  }catch(_){}
 }
 function loadMapCache(){
   try{
     const raw = localStorage.getItem(MAP_CACHE_KEY);
     if(!raw) return null;
-    const {ts, freeList} = JSON.parse(raw);
+
+    const { ts, meta, freeList } = JSON.parse(raw);
+    if(!cacheMetaOK(meta)) return null;
     if(!Array.isArray(freeList)) return null;
-    if(Date.now() - ts > CACHE_TTL_MS) return {freeList, stale:true};
-    return {freeList, stale:false};
-  }catch(_){ return null; }
+
+    if(Date.now() - ts > CACHE_TTL_MS) return { freeList, stale: true };
+    return { freeList, stale: false };
+  }catch(_){
+    return null;
+  }
 }
 function saveConfCache(conf){
-  try{ localStorage.setItem(CONF_CACHE_KEY, JSON.stringify({ts:Date.now(), conf})) }catch(_){}
+  try{
+    localStorage.setItem(
+      CONF_CACHE_KEY,
+      JSON.stringify({ ts: Date.now(), meta: CACHE_META, conf })
+    );
+  }catch(_){}
 }
 function loadConfCache(){
   try{
     const raw = localStorage.getItem(CONF_CACHE_KEY);
     if(!raw) return null;
-    const {ts, conf} = JSON.parse(raw);
+
+    const { ts, meta, conf } = JSON.parse(raw);
+    if(!cacheMetaOK(meta)) return null;
     if(!conf) return null;
-    return {conf, stale:(Date.now()-ts) > CACHE_TTL_MS};
-  }catch(_){ return null; }
+
+    return { conf, stale: (Date.now() - ts) > CACHE_TTL_MS };
+  }catch(_){
+    return null;
+  }
 }
 function saveLogoCache(logo){
-  try{ localStorage.setItem(LOGO_CACHE_KEY, JSON.stringify({ts:Date.now(), logo})) }catch(_){}
+  try{
+    localStorage.setItem(
+      LOGO_CACHE_KEY,
+      JSON.stringify({ ts: Date.now(), meta: CACHE_META, logo })
+    );
+  }catch(_){}
 }
 function loadLogoCache(){
   try{
     const raw = localStorage.getItem(LOGO_CACHE_KEY);
     if(!raw) return null;
-    const {ts, logo} = JSON.parse(raw);
+
+    const { ts, meta, logo } = JSON.parse(raw);
+    if(!cacheMetaOK(meta)) return null;
     if(!logo) return null;
-    return {logo, stale:(Date.now()-ts) > CACHE_TTL_MS};
-  }catch(_){ return null; }
+
+    return { logo, stale: (Date.now() - ts) > CACHE_TTL_MS };
+  }catch(_){
+    return null;
+  }
 }
 function saveBlockCache(isBlocked){
-  try{ localStorage.setItem(BLOCK_CACHE_KEY, JSON.stringify({ts:Date.now(), isBlocked:!!isBlocked})) }catch(_){}
+  try{
+    localStorage.setItem(
+      BLOCK_CACHE_KEY,
+      JSON.stringify({ ts: Date.now(), meta: CACHE_META, isBlocked: !!isBlocked })
+    );
+  }catch(_){}
 }
 function loadBlockCache(){
   try{
     const raw = localStorage.getItem(BLOCK_CACHE_KEY);
     if(!raw) return null;
-    const {ts, isBlocked} = JSON.parse(raw);
+
+    const { ts, meta, isBlocked } = JSON.parse(raw);
+    if(!cacheMetaOK(meta)) return null;
     if(typeof isBlocked !== 'boolean') return null;
-    return {isBlocked, stale:(Date.now()-ts) > (2*60*1000)}; // bloque se refresca más seguido (2 min)
-  }catch(_){ return null; }
+
+    return { isBlocked, stale: (Date.now() - ts) > (2 * 60 * 1000) }; // 2 min
+  }catch(_){
+    return null;
+  }
 }
 
 /* =========================
@@ -1162,15 +1231,22 @@ function sampleDailyFromFreeList(freeList, target=240){
   }
   return out;
 }
-function persistDaily(){ const key='daily_'+todayKey(); try{ localStorage.setItem(key, JSON.stringify(DAILY||[])) }catch(_){ } }
+function persistDaily(){
+  const key = dailyKey();
+  try{ localStorage.setItem(key, JSON.stringify(DAILY||[])) }catch(_){}
+}
 function loadDailyFromCache(){
-  const key='daily_'+todayKey();
+  const key = dailyKey();
   try{
-    const cached = JSON.parse(localStorage.getItem(key)||'[]');
-    if(Array.isArray(cached)&&cached.length){
-      DAILY = cached.filter(n => ALL[n]==='libre');
-      persistDaily(); return DAILY.length>0;
+    const cached = JSON.parse(localStorage.getItem(key) || '[]');
+    if(Array.isArray(cached) && cached.length){
+      DAILY = cached.filter(n => ALL[n] === 'libre');
+      persistDaily();
+      return DAILY.length > 0;
     }
+  }catch(_){}
+  return false;
+}
   }catch(_){}
   return false;
 }
@@ -1561,4 +1637,3 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   </script>
 </body>
 </html>
-
