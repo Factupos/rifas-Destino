@@ -40,6 +40,11 @@
 
   --header-h:90px; --vv-top:0px; --extra-top:0px;
   --sat: env(safe-area-inset-top, 0px);
+
+  /* Título pro */
+  --title-glow-1: rgba(39,215,255,.35);
+  --title-glow-2: rgba(255,211,77,.26);
+  --title-glow-3: rgba(255,61,154,.22);
 }
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -70,7 +75,8 @@ header{
   box-shadow:0 10px 26px rgba(0,0,0,.35);
   transform:translateZ(0); -webkit-transform:translateZ(0); backface-visibility:hidden; contain:paint;
 }
-.brand{display:flex;align-items:center;gap:12px}
+
+.brand{display:flex;align-items:center;gap:12px; min-width:0}
 .logoWrap{
   position:relative;
   width:56px; height:56px;
@@ -115,15 +121,118 @@ header{
     0 0 22px rgba(39,215,255,.24);
   animation:logoPulse 1.6s ease-in-out infinite alternate;
 }
+
+/* ✅ Keyframes corregidos (antes había un "to{...}" fuera del bloque y rompía el CSS) */
 @keyframes logoPulse{
   from{ transform:translateY(0) scale(1); filter:saturate(1.06) }
   to{ transform:translateY(-1px) scale(1.035); filter:saturate(1.22) brightness(1.05) }
 }
 @keyframes logoRing{to{transform:rotate(1turn)}}
-@keyframes logoGlow{to{transform:translateY(-1px);opacity:.85}}to{transform:translateY(-1px) scale(1.03);filter:saturate(1.18) brightness(1.05)}}
-.brand h1{margin:0;font-weight:900;font-size:clamp(18px,3.2vw,24px);letter-spacing:.5px;
-  background:linear-gradient(90deg,#fff,var(--accent2) 50%,var(--accent1) 90%);
-  -webkit-background-clip:text;background-clip:text;color:transparent}
+@keyframes logoGlow{
+  from{ transform:translateY(0); opacity:.55 }
+  to{ transform:translateY(-1px); opacity:.85 }
+}
+
+/* ====== TÍTULO EMPRESA (PRO + MUY VISIBLE) ====== */
+.brand h1,
+#houseName{
+  margin:0;
+  font-weight:1000;
+  font-size:clamp(18px,3.2vw,24px);
+  letter-spacing:.6px;
+  line-height:1.05;
+
+  /* Para textos largos: no rompe header */
+  max-width:min(52vw, 360px);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+
+  /* Gradiente + brillo premium */
+  background:linear-gradient(90deg,
+    rgba(255,255,255,1) 0%,
+    rgba(255,255,255,.92) 12%,
+    var(--accent2) 42%,
+    var(--accent1) 72%,
+    rgba(255,255,255,.96) 100%
+  );
+  background-size:220% 100%;
+  background-position:0% 50%;
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+
+  /* Glow controlado (no “quemado”) */
+  text-shadow:
+    0 1px 0 rgba(0,0,0,.35),
+    0 0 18px var(--title-glow-1),
+    0 0 22px var(--title-glow-2),
+    0 0 28px var(--title-glow-3);
+
+  position:relative;
+  transform:translateZ(0);
+  filter:drop-shadow(0 8px 18px rgba(0,0,0,.28));
+  animation:titleSheen 3.8s ease-in-out infinite;
+}
+@keyframes titleSheen{
+  0%{ background-position:0% 50%; filter:drop-shadow(0 8px 18px rgba(0,0,0,.28)); }
+  55%{ background-position:100% 50%; filter:drop-shadow(0 10px 22px rgba(0,0,0,.30)); }
+  100%{ background-position:0% 50%; filter:drop-shadow(0 8px 18px rgba(0,0,0,.28)); }
+}
+
+/* Subrayado luminoso fino + elegante */
+.brand h1::after,
+#houseName::after{
+  content:"";
+  position:absolute;
+  left:0;
+  bottom:-8px;
+  width:100%;
+  height:3px;
+  border-radius:999px;
+  background:linear-gradient(90deg,
+    rgba(255,255,255,.0) 0%,
+    rgba(255,255,255,.55) 12%,
+    var(--accent2) 42%,
+    var(--accent1) 72%,
+    rgba(255,255,255,.0) 100%
+  );
+  opacity:.85;
+  box-shadow:
+    0 0 10px rgba(255,255,255,.18),
+    0 0 18px rgba(39,215,255,.22),
+    0 0 18px rgba(255,211,77,.16);
+  transform-origin:left center;
+  animation:titleLine 2.6s ease-in-out infinite alternate;
+  pointer-events:none;
+}
+@keyframes titleLine{
+  from{ transform:scaleX(.92); opacity:.72 }
+  to{ transform:scaleX(1); opacity:.92 }
+}
+
+/* Badge suave detrás (da “placa” pro al título sin tapar el fondo) */
+.brand h1::before,
+#houseName::before{
+  content:"";
+  position:absolute;
+  inset:-10px -12px -12px -12px;
+  border-radius:16px;
+  background:
+    radial-gradient(60% 80% at 20% 20%, rgba(255,255,255,.10), transparent 55%),
+    linear-gradient(135deg, rgba(255,255,255,.10), rgba(255,255,255,.03));
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.06), 0 10px 26px rgba(0,0,0,.18);
+  opacity:.55;
+  z-index:-1;
+  pointer-events:none;
+}
+
+/* Fallback si no soporta background-clip:text */
+@supports not ((-webkit-background-clip:text) or (background-clip:text)){
+  .brand h1, #houseName{ color:#ffffff; background:none; }
+}
+
 .search-bar{
   flex:1 1 320px;height:56px;border-radius:16px;border:1px solid var(--panel-border);
   padding:0 14px;font-size:20px;line-height:56px;outline:none;background:var(--panel);color:var(--ink);
@@ -614,9 +723,17 @@ body.search-has-text #raffles{ display:none !important; } /* << solo mostrar sel
   .contact-info{flex-direction:row;flex-wrap:wrap;justify-content:center}
   .search-bar,.random-button{width:100%}
   #raffles{gap:10px;margin-top:12px}
+
+  /* En móvil, el título respira y evita cortes raros */
+  .brand h1, #houseName{
+    max-width:min(72vw, 520px);
+  }
 }
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none !important;transition:none !important}}
-  </style>
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none !important;transition:none !important}
+}
+</style>
+
 </head>
 
 <body>
