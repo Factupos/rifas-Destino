@@ -1247,9 +1247,6 @@ function loadDailyFromCache(){
   }catch(_){}
   return false;
 }
-  }catch(_){}
-  return false;
-}
 function pickDaily(force=false){
   if(!force && loadDailyFromCache()) return;
   const libres = Object.keys(ALL||{}).filter(k=>ALL[k]==='libre');
